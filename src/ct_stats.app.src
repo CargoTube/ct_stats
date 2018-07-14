@@ -1,0 +1,16 @@
+{application, ct_stats,
+ [{description, "Cargotube Statistics"},
+  {vsn, "semver"},
+  {registered, [cts_messages]},
+  {mod, { ct_stats_app, []}},
+  {applications,
+   [kernel,
+    stdlib,
+    lager
+   ]},
+  {env,[]},
+  {modules, []},
+  {maintainers, []},
+  {licenses, []},
+  {links, []}
+ ]}.
