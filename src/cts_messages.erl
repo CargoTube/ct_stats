@@ -86,8 +86,9 @@ code_change(_OldVsn, State, _Extra) ->
 perform_update(#state{entries = []} = State) ->
     State;
 perform_update(#state{entries = Entries} = State) ->
+    Pid = self(),
     UpdateFun = fun() ->
-                        calculate_percentile(Entries, self())
+                        calculate_percentile(Entries, Pid)
                 end,
     spawn(UpdateFun),
     State.
