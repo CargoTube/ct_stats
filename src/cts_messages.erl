@@ -143,23 +143,25 @@ calculate_percentile(Entries, Pid) ->
              percentile75 => Percentile75,
              percentile99 => Percentile99,
              slowest => Slowest,
-             avg_msg_sec => AvgMsgSec
+             avg_msg_sec => AvgMsgSec,
+             msg_count => Length
             }}.
 
 update_with_map(#{fastest := Fastest, percentile25 := Percentile25,
                   percentile50 := Percentile50, percentile75 := Percentile75,
                   percentile99 := Percentile99, slowest := Slowest,
-                  avg_msg_sec := AvgMsgSec}, State) ->
-    lager:info("stats: ~p msg/sec [ ~p / ~p / ~p / ~p / * ~p * / ~p ] ms",
+                  avg_msg_sec := AvgMsgSec, msg_count := MsgCount}, State) ->
+    lager:info("stats: ~p msg/sec [ ~p / ~p / ~p / ~p / * ~p * / ~p ] ms; #~p",
                [AvgMsgSec, Fastest, Percentile25, Percentile50, Percentile75,
-                Percentile99, Slowest]),
+                Percentile99, Slowest, MsgCount]),
     State#state{ fastest = Fastest,
                  percentile25 = Percentile25,
                  percentile50 = Percentile50,
                  percentile75 = Percentile75,
                  percentile99 = Percentile99,
                  slowest = Slowest,
-                 avg_msg_sec = AvgMsgSec}.
+                 avg_msg_sec = AvgMsgSec
+               }.
 
 
 
