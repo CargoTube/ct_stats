@@ -33,7 +33,7 @@
 
 
 add(Type, Duration) ->
-    gen_server:cast(?MODULE, {add, Type, Duration/1000.0}).
+    gen_server:cast(?MODULE, {add, Type, Duration}).
 
 update() ->
     gen_server:cast(?MODULE, update).
