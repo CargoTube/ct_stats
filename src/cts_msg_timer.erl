@@ -18,10 +18,10 @@ start_link() ->
     gen_server:start_link(?MODULE, no_params, []).
 
 init(no_params) ->
-    {ok, #state{}}.
+    {ok, #state{}, 100}.
 
 handle_call(_From, _Message, State) ->
-    {reply, unsupported, State}.
+    {reply, unsupported, State, 100}.
 
 handle_cast(_Message, State) ->
     {noreply, State, 100}.
