@@ -4,6 +4,8 @@
 
 -export([add/2,
          update/0,
+         tick/0,
+         msg_move/0,
 
          start_link/0,
          init/1,
@@ -16,15 +18,17 @@
 
 -record(state, {
           entries = [],
-          oldest = undefined,
-          slowest = undefined,
-          fastest = undefined,
+          count = 0,
+          counts = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+          msg_sec = [],
+          avg_msg_sec = 0,
+
+          fastest = 0,
           percentile25 = 0,
           percentile50 = 0,
           percentile75 = 0,
           percentile99 = 0,
-          avg_msg_sec = 0,
-          median = undefined
+          slowest = 0
          }).
 
 
@@ -34,26 +38,41 @@ add(Type, Duration) ->
 update() ->
     gen_server:cast(?MODULE, update).
 
+tick() ->
+    gen_server:cast(?MODULE, tick).
+
+msg_move() ->
+    gen_server:cast(?MODULE, msg_move).
+
 start_link() ->
     gen_server:start_link({local, ?MODULE}, ?MODULE, no_params, []).
 
 init(no_params) ->
+    MaxMsgSec = application:get_env(ct_stats, max_msg_keep, 3600),
     TimeMs = application:get_env(ct_router, stat_update, 300000),
     timer:apply_interval(TimeMs, ?MODULE, update, []),
-    {ok, #state{}}.
+    {ok, #state{msg_sec = create_list(MaxMsgSec, [])}}.
 
 handle_call(_From, _Message, State) ->
     {reply, unsupported, State}.
 
-handle_cast({add, Type, Duration}, #state{entries = Entries} = State) ->
+handle_cast({add, Type, Duration}, #state{entries = Entries,
+                                          count = Count} = State) ->
     Now = erlang:system_time(second),
     NewEntries = [ { Duration, Type, Now} | Entries ],
-    {noreply, State#state{entries = NewEntries} };
+    NewCount = Count + 1,
+    {noreply, State#state{entries = NewEntries, count = NewCount} };
 handle_cast(update, State) ->
-    {noreply, update_state(State)};
+    {noreply, perform_update(State)};
+handle_cast(tick, State) ->
+    {noreply, perform_tick(State)};
+handle_cast(msg_move, State) ->
+    {noreply, perform_msg_move(State)};
 handle_cast(_Message, State) ->
     {noreply, State}.
 
+handle_info({updated, Map}, State) ->
+    {noreply, update_with_map(State, Map)};
 handle_info(_Message, State) ->
     {noreply, State}.
 
@@ -63,10 +82,26 @@ terminate(_Reason, _State) ->
 code_change(_OldVsn, State, _Extra) ->
     {ok, State}.
 
-update_state(#state{entries = []} = State) ->
-    lager:info("stats: nothing sent."),
+
+perform_update(#state{entries = []} = State) ->
     State;
-update_state(#state{entries = Entries}) ->
+perform_update(#state{entries = Entries} = State) ->
+    UpdateFun = fun() ->
+                        calculate_percentile(Entries, self())
+                end,
+    spawn(UpdateFun),
+    State.
+
+perform_tick(#state{count = Count, counts = Counts} = State) ->
+    NewCounts = [ Count | lists:droplast(Counts)],
+    State#state{count = 0, counts = NewCounts}.
+
+perform_msg_move(#state{msg_sec = MsgSecs, counts = Counts} = State) ->
+    Sum = lists:sum(Counts),
+    NewMsgSecs = [ Sum | lists:droplast(MsgSecs) ],
+    State#state{msg_sec = NewMsgSecs}.
+
+calculate_percentile(Entries, Pid) ->
     Now = erlang:system_time(second),
     MaxKeepSec = application:get_env(ct_router, stat_keep, 86400),
     StillOkayTime = Now - MaxKeepSec,
@@ -100,18 +135,31 @@ update_state(#state{entries = Entries}) ->
     AvgMsgSec = Length / (Now - Oldest),
 
 
-    lager:info("stats: ~p msg/sec [ ~p / ~p / ~p / ~p / * ~p * / ~p ] ms #~p",
-               [AvgMsgSec, Fastest, Percentile25, Percentile50, Percentile75,
-                Percentile99, Slowest, Length]),
+    Pid ! {updated, #{
+             fastest => Fastest,
+             percentile25 => Percentile25,
+             percentile50 => Percentile50,
+             percentile75 => Percentile75,
+             percentile99 => Percentile99,
+             slowest => Slowest,
+             avg_msg_sec => AvgMsgSec
+            }}.
 
-    #state{entries = Sorted,
-           percentile25 = Percentile25,
-           percentile50 = Percentile50,
-           percentile75 = Percentile75,
-           percentile99 = Percentile99,
-           fastest = Fastest, slowest = Slowest,
-           avg_msg_sec = AvgMsgSec
-          }.
+update_with_map(#{fastest := Fastest, percentile25 := Percentile25,
+                  percentile50 := Percentile50, percentile75 := Percentile75,
+                  percentile99 := Percentile99, slowest := Slowest,
+                  avg_msg_sec := AvgMsgSec}, State) ->
+    lager:info("stats: ~p msg/sec [ ~p / ~p / ~p / ~p / * ~p * / ~p ] ms",
+               [AvgMsgSec, Fastest, Percentile25, Percentile50, Percentile75,
+                Percentile99, Slowest]),
+    State#state{ fastest = Fastest,
+                 percentile25 = Percentile25,
+                 percentile50 = Percentile50,
+                 percentile75 = Percentile75,
+                 percentile99 = Percentile99,
+                 slowest = Slowest,
+                 avg_msg_sec = AvgMsgSec}.
+
 
 
 percentile(Percentil, Entries, Length) ->
@@ -137,3 +185,9 @@ calc_percentile(Pos, Partial, Entries) when is_integer(Pos) ->
     A + (B - A) * Partial;
 calc_percentile(Pos, Partial, Entries) when is_float(Pos) ->
     calc_percentile(round(Pos), Partial, Entries).
+
+
+create_list(0, List) ->
+    List;
+create_list(Count, List) ->
+    create_list(Count -1, [ 0 |  List ]).

@@ -13,6 +13,9 @@ init(noparams) ->
     Procs = [
              #{ id => messagestat,
                 start => {cts_messages, start_link, []}
+              },
+             #{ id => msg_timer,
+                start => {cts_msg_timer, start_link, []}
               }
             ],
     Flags = #{},
