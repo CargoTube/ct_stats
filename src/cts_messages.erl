@@ -72,7 +72,7 @@ handle_cast(_Message, State) ->
     {noreply, State}.
 
 handle_info({updated, Map}, State) ->
-    {noreply, update_with_map(State, Map)};
+    {noreply, update_with_map(Map, State)};
 handle_info(_Message, State) ->
     {noreply, State}.
 
