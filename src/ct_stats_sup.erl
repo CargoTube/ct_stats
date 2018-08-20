@@ -11,12 +11,19 @@ start_link() ->
 
 init(noparams) ->
     Procs = [
-             #{ id => messagestat,
-                start => {cts_messages, start_link, []}
-              },
-             #{ id => msg_timer,
-                start => {cts_msg_timer, start_link, []}
-              }
+             cts_messages(),
+             cts_msg_timer()
             ],
     Flags = #{},
     {ok, {Flags, Procs}}.
+
+cts_messages() ->
+    #{ id => messagestat,
+       start => {ct_stats_messages, start_link, []}
+     }.
+
+
+cts_msg_timer() ->
+    #{ id => msg_timer,
+       start => {ct_stats_msg_timer, start_link, []}
+     }.

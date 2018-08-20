@@ -1,4 +1,4 @@
--module(cts_msg_timer).
+-module(ct_stats_msg_timer).
 
 -behaviour(gen_server).
 
@@ -27,7 +27,7 @@ handle_cast(_Message, State) ->
     {noreply, State, 100}.
 
 handle_info(timeout, #state{count = Count} = State) ->
-    cts_messages:tick(),
+    ct_stats_messages:tick(),
     maybe_move_msg((Count rem 10 == 0) and (Count > 0) ),
     NewCount = maybe_send_update(Count),
     {noreply, State#state{count = NewCount}, 100};
@@ -41,12 +41,12 @@ code_change(_OldVsn, State, _Extra) ->
     {ok, State}.
 
 maybe_send_update(3000) ->
-    cts_messages:update(),
+    ct_stats_messages:update(),
     0;
 maybe_send_update(Count) ->
     Count + 1.
 
 maybe_move_msg(true) ->
-    cts_messages:msg_move();
+    ct_stats_messages:msg_move();
 maybe_move_msg(_) ->
     ok.

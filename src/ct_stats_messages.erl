@@ -1,4 +1,4 @@
--module(cts_messages).
+-module(ct_stats_messages).
 
 -behaviour(gen_server).
 
