@@ -40,7 +40,7 @@ terminate(_Reason, _State) ->
 code_change(_OldVsn, State, _Extra) ->
     {ok, State}.
 
-maybe_send_update(3000) ->
+maybe_send_update(600) ->
     ct_stats_messages:update(),
     0;
 maybe_send_update(Count) ->
