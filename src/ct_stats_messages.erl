@@ -151,8 +151,8 @@ update_with_map(#{fastest := Fastest, percentile25 := Percentile25,
                   percentile50 := Percentile50, percentile75 := Percentile75,
                   percentile99 := Percentile99, slowest := Slowest,
                   avg_msg_sec := AvgMsgSec, msg_count := MsgCount}, State) ->
-    lager:info("stats: ~.2.f msg/sec [ ~.2.f / ~.2.f / ~.2.f / ~.2.f /"
-               " * ~.2.f * / ~.2.f ] ms; #~p",
+    lager:info("stats: ~.2.0f msg/sec [ ~.2.0f / ~.2.0f / ~.2.0f / ~.2.0f /"
+               " * ~.2.0f * / ~.2.0f ] ms; #~p",
                [AvgMsgSec, Fastest, Percentile25, Percentile50, Percentile75,
                 Percentile99, Slowest, MsgCount]),
     State#state{ fastest = Fastest,
